@@ -1,0 +1,1 @@
+Convenience class to quickly generate scripts to spawn on slurm.
