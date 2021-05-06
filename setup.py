@@ -10,10 +10,10 @@ setup(
     #license='BSD 2-clause',
     packages=['slurmbuilder'],
     install_requires=[
-        'argparse',
         'numpy',
-        # 'pathlib',
-        # 'subprocess',
+        'itertools',
+        'pathlib',
+        'subprocess',
         ],
 
     # classifiers=[
