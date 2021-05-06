@@ -117,12 +117,6 @@ class SlurmBuilder(object):
         arg_names = [v["name"] for v in self.iteration_list]
         arg_ids = [v["id"] for v in self.iteration_list]
         arg_vals = [v["values"] for v in self.iteration_list]
-        print(arg_names, arg_ids, arg_vals)
-
-        job_name_id_postfix_template = "{}_" * len(self.iteration_list)
-        job_name_id_postfix_template = job_name_id_postfix_template[:-1]  # remove last underscore
-        print(job_name_id_postfix_template)
-        fstr_templ = "{}_"
 
         all_combos = itertools.product(*arg_vals)
         for combo in all_combos:
@@ -134,11 +128,8 @@ class SlurmBuilder(object):
                     v = value
                 job_id += f"{arg_id}{v}_"
             job_id = job_id[:-1]  # remove last underscore
-            print(job_id)
             kwargs = {arg_name: value for arg_name, value in zip(arg_names, combo)}
-            print(kwargs)
             fullcommand = self.build_shfile_body(job_name_identifier=job_id, **kwargs)
-            print(fullcommand)
 
             # write bash file
             shfilename = self.build_shfilename(job_name_identifier=job_id)

@@ -11,9 +11,9 @@ setup(
     packages=['slurmbuilder'],
     install_requires=[
         'numpy',
-        'itertools',
-        'pathlib',
-        'subprocess',
+        # 'itertools',
+        # 'pathlib',
+        # 'subprocess',
         ],
 
     # classifiers=[
