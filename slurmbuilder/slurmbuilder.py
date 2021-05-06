@@ -1,26 +1,27 @@
-from argparse import ArgumentParser
 import numpy as np
 from pathlib import Path
 import subprocess
-import os
+import itertools
 
 
-class AbstractSlurmBuilder(object):
+class SlurmBuilder(object):
     def __init__(
             self,
             job_name: str,
             mail_user: str,
             base_command: str,
-            pre_command: str,
-            post_command: str,
+            pre_command: str = "",
+            post_command: str = "",
             partition: str = "cpu_normal",
             time: str = "48:00:00",
             mem_per_cpu: str = "1000",
             mail_type: str = "ALL",
-            runscript_outdir: str =  "runscripts/generated",
+            runscript_outdir: str = "runscripts/generated",
+            iteration_list: list = [],
             **kwargs
     ):
         self.mail_user = mail_user
+        self.base_command = base_command
         self.mail_type = mail_type
         self.partition = partition
         self.job_name = job_name
@@ -28,6 +29,7 @@ class AbstractSlurmBuilder(object):
         self.mem_per_cpu = mem_per_cpu
         self.pre_command = pre_command
         self.post_command = post_command
+        self.iteration_list = iteration_list
 
         self.template_slurm_config = "#SBATCH --{command_name}={command_value}\n"
         self.runscript_outdir = runscript_outdir
@@ -104,77 +106,42 @@ class AbstractSlurmBuilder(object):
         fullcommand = header + precommands + maincommand
         return fullcommand
 
-
-class SlurmBuilder(AbstractSlurmBuilder):
-    def __init__(
-            self,
-            job_name: str,
-            mail_user: str,
-            base_command: str,
-            partition: str = "cpu_normal",
-            time: str = "48:00:00",
-            mem_per_cpu: str = "1000",
-            mail_type: str = "ALL",
-            seeds: int = np.arange(0, 10, dtype=np.int),
-            num_episodes: int = 10,
-            outdir: str = "data/output",
-            act_conda: str = "",  # "source /opt/conda/etc/profile.d/conda.sh\nconda activate py38\n",
-            runscript_outdir: str = "runscripts/generated",
-            **kwargs
-    ):
-        pre_command = act_conda
-        post_command = ""
-        super().__init__(
-            job_name=job_name,
-            mail_user=mail_user,
-            base_command=base_command,
-            pre_command=pre_command,
-            post_command=post_command,
-            partition=partition,
-            time=time,
-            mem_per_cpu=mem_per_cpu,
-            mail_type=mail_type,
-            runscript_outdir=runscript_outdir,
-            ** kwargs
-        )
-        self.seeds = seeds
-        self.num_episodes = num_episodes
-        self.mail_user = mail_user
-        self.mail_type = mail_type
-        self.partition = partition
-        self.job_name = job_name
-        self.time = time
-        self.mem_per_cpu = mem_per_cpu
-        self.outdir = outdir
-        self.base_command = base_command
-        self.act_conda = act_conda
-
-    def build_file(self):
-        pass
-
-    def register_maincommand(self, name):
-        if type(name) == str:
-            self.main_arg_names.append(name)
-
-    def build_maincommand(self, seed: int, num_episodes: int, outdir: str):
+    def build_maincommand(self, **kwargs):
         maincommand = ""
         maincommand += self.base_command
-        maincommand += f" --seeds {seed}"
-        maincommand += f" --num_episodes {num_episodes}"
-        maincommand += f" --outdir {outdir}"
+        for key, val in kwargs.items():
+            maincommand += f" --{key} {val}"
         return maincommand
 
-    def build_job_name_identifier_postfix(self, seed: int, **kwargs):
-        return f"neps{self.num_episodes}_s{seed}"
-
     def build_shfiles(self):
-        for seed in self.seeds:
-            # build bash file
-            job_name_identifier = self.build_job_name_identifier_postfix(seed=seed)
-            fullcommand = self.build_shfile_body(job_name_identifier=job_name_identifier, seed=seed, outdir=self.outdir, num_episodes=self.num_episodes)
+        arg_names = [v["name"] for v in self.iteration_list]
+        arg_ids = [v["id"] for v in self.iteration_list]
+        arg_vals = [v["values"] for v in self.iteration_list]
+        print(arg_names, arg_ids, arg_vals)
+
+        job_name_id_postfix_template = "{}_" * len(self.iteration_list)
+        job_name_id_postfix_template = job_name_id_postfix_template[:-1]  # remove last underscore
+        print(job_name_id_postfix_template)
+        fstr_templ = "{}_"
+
+        all_combos = itertools.product(*arg_vals)
+        for combo in all_combos:
+            job_id = ""
+            for arg_id, value in zip(arg_ids, combo):
+                if isinstance(value, (list, tuple, np.ndarray)):
+                    v = value[0]
+                else:
+                    v = value
+                job_id += f"{arg_id}{v}_"
+            job_id = job_id[:-1]  # remove last underscore
+            print(job_id)
+            kwargs = {arg_name: value for arg_name, value in zip(arg_names, combo)}
+            print(kwargs)
+            fullcommand = self.build_shfile_body(job_name_identifier=job_id, **kwargs)
+            print(fullcommand)
 
             # write bash file
-            shfilename = self.build_shfilename(job_name_identifier=job_name_identifier)
+            shfilename = self.build_shfilename(job_name_identifier=job_id)
             shfilename = Path(shfilename)
             shfilename.parent.mkdir(parents=True, exist_ok=True)
             with open(shfilename, 'w') as file:
@@ -185,107 +152,22 @@ class SlurmBuilder(AbstractSlurmBuilder):
         self.write_spawnlist()
 
 
-def get_parser():
-    parser = ArgumentParser()
-
-    parser.add_argument(
-        "--seeds",
-        nargs="+",
-        type=int,
-        default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-        help="Seeds for evaluation",
-    )
-
-    parser.add_argument(
-        "--num_episodes",
-        type=int,
-        default=10,
-        help="Number of episodes to evaluate policy on",
-    )
-
-    parser.add_argument(
-        "--mail_user",
-        default="benjamin@tnt.uni-hannover.de",
-        type=str,
-        help="Email for slurm"
-    )
-
-    parser.add_argument(
-        "--mail_type",
-        type=str,
-        default="ALL",
-    )
-
-    parser.add_argument(
-        "--partition",
-        type=str,
-        default="cpu_normal",
-    )
-
-    parser.add_argument(
-        "--job_name",
-        type=str,
-    )
-
-    parser.add_argument(
-        "--time",
-        type=str,
-        default="48:00:00",
-    )
-
-    parser.add_argument(
-        "--mem_per_cpu",
-        type=str,
-        default="1000M",
-        help="memory per CPU in MB"
-    )
-
-    parser.add_argument(
-        "--outdir",
-        type=str,
-        default="output",
-    )
-
-    parser.add_argument(
-        "--base_command",
-        type=str
-    )
-
-    return parser
-
-
-def main(args=None):
-    parser = get_parser()
-    args = parser.parse_args(args)
-
-    slurmbuilder = SlurmBuilder(
-        job_name=args.job_name,
-        mail_user=args.mail_user,
-        seeds=args.seeds,
-        num_episodes=args.num_episodes,
-        partition=args.partition,
-        time=args.time,
-        mem_per_cpu=args.mem_per_cpu,
-        mail_type=args.mail_type,
-        outdir=args.outdir,
-        base_command=args.base_command
-    )
-    slurmbuilder.build_shfiles()
-    # slurmbuilder.spawn()
-
-
 if __name__ == "__main__":
-    basecommands = {
-        "autosklearn_NASA": "python train.py --dataset_names NASA --budgets 600 --exp_id automl_600 --nested_resampling 10 --n_folds_cv 10  --output_dir results --n_jobs 8 ",
-    }
-    for job_name, basecommand in basecommands.items():
-        args = [
-            "--job_name", job_name,
-            "--outdir", "data/results/baselines",
-            "--seeds", "0", "1", "2", "3", "4", #"5", "6", "7", "8", "9",  # "10",
-            "--num_episodes", "10",
-            "--base_command", basecommand,
-            "--time", "24:00:00",
-            "--mem_per_cpu", "8000M",
+    sbuilder = SlurmBuilder(
+        job_name="my_slurm_job",
+        mail_user="some_mail@bubbib.com",
+        base_command="echo Hello World",
+        iteration_list=[
+            {
+                "name": "seeds",
+                "id": "s",
+                "values": [0, 4, 6, 8]
+            },
+            {
+                "name": "num_episodes",
+                "id": "neps",
+                "values": [14, 16]
+            }
         ]
-        main(args)
+    )
+    sbuilder.build_shfiles()
