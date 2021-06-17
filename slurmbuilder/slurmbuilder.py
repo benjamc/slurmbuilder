@@ -73,7 +73,9 @@ class SlurmBuilder(object):
             Everything that should be executed after `base_command`. Should contain intermediate newlines if applicable.
         output_filename : str, default=""
             STDOUT and STDERR will be directed to this filename. The placeholder %j will be replaced by the slurm
-            job-id. If this parameter is not set, all output will be directed into the file slurm-<JobID>.out.
+            job-id. If this parameter is not set, all output will be directed into the file slurm-<JobID>.out in the
+            ROOT directory. If the slurm logs should be written to a subdirectory of root, the subdirectories must
+            exist.
         partition : str, default="cpu_normal"
             Slurm partition to start jobs on. See the `slurm wiki page <https://tntintern/wikitnt/index.php/TNT_Cluster_%C3%9Cbersicht>`
             for more information about available partitions.
