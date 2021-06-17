@@ -40,9 +40,14 @@ class SlurmBuilder(object):
             base_command: str,
             pre_command: str = "",
             post_command: str = "",
+            output_filename: str = "",
             partition: str = "cpu_normal",
             time: str = "48:00:00",
-            nodes: str = "2",
+            nodes: str = "1",
+            tasks_per_node: str = "",
+            mincpus: str = "",
+            ntasks: str = "",
+            cpus_per_task: str = "",
             mem_per_cpu: str = "1000M",
             mail_type: str = "ALL",
             runscript_outdir: str = "runscripts/generated",
@@ -52,6 +57,7 @@ class SlurmBuilder(object):
         Get information.
         For more information on slurm parameters see the
         `slurm wiki page <https://tntintern/wikitnt/index.php/TNT_Cluster_%C3%9Cbersicht>`.
+        Parameters with empty values will not be written to the slurm file.
 
         Parameters
         ----------
@@ -65,13 +71,27 @@ class SlurmBuilder(object):
             Everything that should be executed before `base_command`. Should contain intermediate newlines if applicable.
         post_command : str, default=""
             Everything that should be executed after `base_command`. Should contain intermediate newlines if applicable.
+        output_filename : str, default=""
+            STDOUT and STDERR will be directed to this filename. The placeholder %j will be replaced by the slurm
+            job-id. If this parameter is not set, all output will be directed into the file slurm-<JobID>.out.
         partition : str, default="cpu_normal"
             Slurm partition to start jobs on. See the `slurm wiki page <https://tntintern/wikitnt/index.php/TNT_Cluster_%C3%9Cbersicht>`
             for more information about available partitions.
         time : str, default="48:00:00"
             Alloted runtime in format HH:MM:SS.
-        nodes : str, default="2"
+        nodes : str, default="1"
             Reserve n nodes. All following reserved CPUs must be on the reserved nodes.
+        tasks_per_node : str, default=""
+            Number of tasks that should be started on a node. Each task uses one CPU on a node.
+        mincpus : str, default=""
+            Total number of CPUs reserved for a job. One CPU = one thread. Each core has 2 threads. An uneven number
+            of CPUs will be rounded to an even one because always whole cores are reserved.
+        ntasks : str, default=""
+            Total number of tasks that should be started. Normally, one task per node will be started. Maybe this
+            parameter is influenced or overriden by the parameter cpus-per-task.
+        cpus_per_task : str, default=""
+            Number of CPUs that should be used for a task. Normally, one task per node will be started. In this case,
+            each task uses one CPUs on a node.
         mem_per_cpu : str, default="1000M"
             Memory per cpu.
         mail_type : str, default="ALL"
@@ -96,11 +116,16 @@ class SlurmBuilder(object):
         self.mail_user = mail_user
         self.base_command = base_command
         self.mail_type = mail_type
+        self.output_filename = output_filename
         self.partition = partition
         self.job_name = job_name
         self.time = time
         self.nodes = nodes
+        self.tasks_per_node = tasks_per_node
+        self.ntasks = ntasks
+        self.cpus_per_task = cpus_per_task
         self.mem_per_cpu = mem_per_cpu
+        self.mincpus = mincpus
         self.pre_command = pre_command
         self.post_command = post_command
         self.iteration_list = iteration_list
@@ -114,8 +139,13 @@ class SlurmBuilder(object):
             "mail-type": self.mail_type,
             "partition": self.partition,
             "job-name": self.job_name,
+            "output": self.output_filename,
             "time": self.time,
             "nodes": self.nodes,
+            "tasks-per-node": self.tasks_per_node,
+            "ntasks": self.ntasks,
+            "mincpus": self.mincpus,
+            "cpus-per-task": self.cpus_per_task,
             "mem-per-cpu": self.mem_per_cpu,
         }
 
@@ -145,7 +175,8 @@ class SlurmBuilder(object):
         for command_name, command_value in self.slurm_config.items():
             if command_name == "job-name" and len(job_name_identifier) > 0:
                 command_value += f"_{job_name_identifier}"
-            header += self.template_slurm_config.format(command_name=command_name, command_value=command_value)
+            if command_value:
+                header += self.template_slurm_config.format(command_name=command_name, command_value=command_value)
         header += "\n"
         return header
 
