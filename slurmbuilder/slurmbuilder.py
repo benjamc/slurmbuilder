@@ -18,9 +18,13 @@ class SlurmBuilder(object):
     #
     #SBATCH --mail-user=some_mail@bubbib.com
     #SBATCH --mail-type=ALL
-    #SBATCH --partition=cpu_normal
     #SBATCH --job-name=my_slurm_job_s6_neps16
     #SBATCH --time=48:00:00
+    #SBATCH --partition=cpu_normal      # Partition auf der gerechnet werden soll. Ohne Angabe des Parameters wird auf der
+                                        #   Default-Partition gerechnet. Es können mehrere angegeben werden, mit Komma getrennt.
+    #SBATCH --nodes=2                   # Reservierung von 2 Rechenknoten
+                                        #   alle nachfolgend reservierten CPUs müssen sich auf den reservierten Knoten befinden
+    #SBATCH --tasks-per-node=4          # Reservierung von 4 CPUs pro Rechenknoten
     #SBATCH --mem-per-cpu=1000
     #
     echo precommand
@@ -38,6 +42,7 @@ class SlurmBuilder(object):
             post_command: str = "",
             partition: str = "cpu_normal",
             time: str = "48:00:00",
+            nodes: str = "2",
             mem_per_cpu: str = "1000M",
             mail_type: str = "ALL",
             runscript_outdir: str = "runscripts/generated",
@@ -65,6 +70,8 @@ class SlurmBuilder(object):
             for more information about available partitions.
         time : str, default="48:00:00"
             Alloted runtime in format HH:MM:SS.
+        nodes : str, default="2"
+            Reserve n nodes. All following reserved CPUs must be on the reserved nodes.
         mem_per_cpu : str, default="1000M"
             Memory per cpu.
         mail_type : str, default="ALL"
@@ -92,6 +99,7 @@ class SlurmBuilder(object):
         self.partition = partition
         self.job_name = job_name
         self.time = time
+        self.nodes = nodes
         self.mem_per_cpu = mem_per_cpu
         self.pre_command = pre_command
         self.post_command = post_command
@@ -107,6 +115,7 @@ class SlurmBuilder(object):
             "partition": self.partition,
             "job-name": self.job_name,
             "time": self.time,
+            "nodes": self.nodes,
             "mem-per-cpu": self.mem_per_cpu,
         }
 
