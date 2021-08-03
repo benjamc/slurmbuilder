@@ -51,6 +51,7 @@ class SlurmBuilder(object):
             mem_per_cpu: str = "1000M",
             mail_type: str = "ALL",
             runscript_outdir: str = "runscripts/generated",
+            array: str = "",
             iteration_list: list = [],
     ):
         """
@@ -123,6 +124,7 @@ class SlurmBuilder(object):
         self.job_name = job_name
         self.time = time
         self.nodes = nodes
+        self.array = array
         self.tasks_per_node = tasks_per_node
         self.ntasks = ntasks
         self.cpus_per_task = cpus_per_task
@@ -142,6 +144,7 @@ class SlurmBuilder(object):
             "partition": self.partition,
             "job-name": self.job_name,
             "output": self.output_filename,
+            "array": self.array,
             "time": self.time,
             "nodes": self.nodes,
             "tasks-per-node": self.tasks_per_node,
