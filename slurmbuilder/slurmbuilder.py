@@ -2,7 +2,7 @@ import numpy as np
 from pathlib import Path
 import subprocess
 import itertools
-
+from typing import Dict
 
 class SlurmBuilder(object):
     """
@@ -35,24 +35,12 @@ class SlurmBuilder(object):
     """
     def __init__(
             self,
-            job_name: str,
-            mail_user: str,
+            slurm_config: Dict[str, str],
             base_command: str,
             pre_command: str = "",
             post_command: str = "",
             output_filename: str = "",
-            partition: str = "cpu_normal",
-            time: str = "48:00:00",
-            nodes: str = "1",
-            tasks_per_node: str = "",
-            mincpus: str = "",
-            ntasks: str = "",
-            cpus_per_task: str = "",
-            gres: str = "",
-            mem_per_cpu: str = "1000M",
-            mail_type: str = "ALL",
             runscript_outdir: str = "runscripts/generated",
-            array: str = "",
             iteration_list: list = [],
     ):
         """
@@ -63,10 +51,17 @@ class SlurmBuilder(object):
 
         Parameters
         ----------
-        job_name : str
-            Job name for slurm. Can be appended by ids from `iteration_list`.
-        mail_user : str
-            E-mail address from user.
+        slurm_config : Dict[str, str]
+            Dictionary containing the slurm configuration. E.g.:
+
+                    {
+                    'job-name': "my_slurm_job",
+                    "mail-user": "hihi@hehe.hoho",
+                    "mail-type": 'ALL',
+                    "array": "0-4",
+                    "time": "24:00:00",
+                    "cpus-per-task": "1",
+                    }
         base_command : str
             Command which should be executed. Appended with names and values from `iteration_list`.
         pre_command : str, default=""
@@ -78,30 +73,6 @@ class SlurmBuilder(object):
             job-id. If this parameter is not set, all output will be directed into the file slurm-<JobID>.out in the
             ROOT directory. If the slurm logs should be written to a subdirectory of root, the subdirectories must
             exist.
-        partition : str, default="cpu_normal"
-            Slurm partition to start jobs on. See the `slurm wiki page <https://tntintern/wikitnt/index.php/TNT_Cluster_%C3%9Cbersicht>`
-            for more information about available partitions.
-        time : str, default="48:00:00"
-            Alloted runtime in format HH:MM:SS.
-        nodes : str, default="1"
-            Reserve n nodes. All following reserved CPUs must be on the reserved nodes.
-        tasks_per_node : str, default=""
-            Number of tasks that should be started on a node. Each task uses one CPU on a node.
-        mincpus : str, default=""
-            Total number of CPUs reserved for a job. One CPU = one thread. Each core has 2 threads. An uneven number
-            of CPUs will be rounded to an even one because always whole cores are reserved.
-        ntasks : str, default=""
-            Total number of tasks that should be started. Normally, one task per node will be started. Maybe this
-            parameter is influenced or overriden by the parameter cpus-per-task.
-        cpus_per_task : str, default=""
-            Number of CPUs that should be used for a task. Normally, one task per node will be started. In this case,
-            each task uses one CPUs on a node.
-        gres : str, default=""
-            GPU configuration. E.g., gpu:v100:2.
-        mem_per_cpu : str, default="1000M"
-            Memory per cpu.
-        mail_type : str, default="ALL"
-            What notifications to get from slurm via e-mail.
         runscript_outdir : str, default="runscripts/generated"
             Where to save the slurm scripts.
         iteration_list : list[dict], default=[]
@@ -119,45 +90,19 @@ class SlurmBuilder(object):
             name and job name.
 
         """
-        self.mail_user = mail_user
         self.base_command = base_command
-        self.mail_type = mail_type
         self.output_filename = output_filename
-        self.partition = partition
-        self.job_name = job_name
-        self.time = time
-        self.nodes = nodes
-        self.array = array
-        self.tasks_per_node = tasks_per_node
-        self.ntasks = ntasks
-        self.cpus_per_task = cpus_per_task
-        self.mem_per_cpu = mem_per_cpu
-        self.mincpus = mincpus
         self.pre_command = pre_command
         self.post_command = post_command
         self.iteration_list = iteration_list
-        self.gres = gres
 
         self.template_slurm_config = "#SBATCH --{command_name}={command_value}\n"
         self.runscript_outdir = runscript_outdir
         self.runlist_fname = Path(self.runscript_outdir) / "runcommands.sh"
 
-        self.slurm_config = {
-            "mail-user": self.mail_user,
-            "mail-type": self.mail_type,
-            "partition": self.partition,
-            "job-name": self.job_name,
-            "output": self.output_filename,
-            "array": self.array,
-            "time": self.time,
-            "nodes": self.nodes,
-            "tasks-per-node": self.tasks_per_node,
-            "ntasks": self.ntasks,
-            "mincpus": self.mincpus,
-            "cpus-per-task": self.cpus_per_task,
-            "mem-per-cpu": self.mem_per_cpu,
-            "gres": self.gres,
-        }
+        self.slurm_config = slurm_config
+
+        self.job_name = self.slurm_config.get("job-name", "myjob")
 
         self.main_command_template = " --{name} {value}"
         self.main_arg_names = []
@@ -352,8 +297,13 @@ class SlurmBuilder(object):
 
 if __name__ == "__main__":
     sbuilder = SlurmBuilder(
-        job_name="my_slurm_job",
-        mail_user="some_mail@bubbib.com",
+        slurm_config={
+            'job-name': "my_slurm_job",
+            "mail-user": "hihi@hehe.hoho",
+            "mail-type": 'ALL',
+        },
+        # job_name="my_slurm_job",
+        # mail_user="some_mail@bubbib.com",
         pre_command="echo setting env",
         base_command="echo Hello World",
         post_command="echo cleaning up",
