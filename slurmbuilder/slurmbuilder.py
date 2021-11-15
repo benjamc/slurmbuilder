@@ -48,6 +48,7 @@ class SlurmBuilder(object):
             mincpus: str = "",
             ntasks: str = "",
             cpus_per_task: str = "",
+            gres: str = "",
             mem_per_cpu: str = "1000M",
             mail_type: str = "ALL",
             runscript_outdir: str = "runscripts/generated",
@@ -95,6 +96,8 @@ class SlurmBuilder(object):
         cpus_per_task : str, default=""
             Number of CPUs that should be used for a task. Normally, one task per node will be started. In this case,
             each task uses one CPUs on a node.
+        gres : str, default=""
+            GPU configuration. E.g., gpu:v100:2.
         mem_per_cpu : str, default="1000M"
             Memory per cpu.
         mail_type : str, default="ALL"
@@ -133,6 +136,7 @@ class SlurmBuilder(object):
         self.pre_command = pre_command
         self.post_command = post_command
         self.iteration_list = iteration_list
+        self.gres = gres
 
         self.template_slurm_config = "#SBATCH --{command_name}={command_value}\n"
         self.runscript_outdir = runscript_outdir
@@ -152,6 +156,7 @@ class SlurmBuilder(object):
             "mincpus": self.mincpus,
             "cpus-per-task": self.cpus_per_task,
             "mem-per-cpu": self.mem_per_cpu,
+            "gres": self.gres,
         }
 
         self.main_command_template = " --{name} {value}"
