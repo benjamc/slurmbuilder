@@ -157,6 +157,7 @@ class SlurmBuilder(object):
         self.main_command_template = " --{name} {value}"
         self.main_arg_names = []
         self.shfilenames = []
+        self.maincommands = []
 
     def build_slurm_header(self, job_name_identifier: str = ""):
         """
@@ -300,6 +301,7 @@ class SlurmBuilder(object):
         maincommand += self.base_command
         for key, val in kwargs.items():
             maincommand += f" --{key} {val}"
+        self.maincommands.append(maincommand)
         return maincommand
 
     def build_shfiles(self):
