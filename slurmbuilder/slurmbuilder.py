@@ -41,6 +41,7 @@ class SlurmBuilder(object):
             post_command: str = "",
             output_filename: str = "",
             runscript_outdir: str = "runscripts/generated",
+            runcommands_file_precommand: str = "",
             iteration_list: list = [],
     ):
         """
@@ -88,6 +89,8 @@ class SlurmBuilder(object):
             This example entry would generate 5 scripts with ' --seeds entry["values"][i]' appended to the basecommand.
             The "id" field is used to add the information to the filename. For seed 3 this would add "_s3" to the file-
             name and job name.
+        runcommands_file_precommand : str, default=""
+            Will be written before the sbatch commands in runcommands.sh. E.g., on LUIS you could write 'git pull\n'.
 
         """
         self.base_command = base_command
@@ -95,6 +98,7 @@ class SlurmBuilder(object):
         self.pre_command = pre_command
         self.post_command = post_command
         self.iteration_list = iteration_list
+        self.runcommands_file_precommand = runcommands_file_precommand
 
         self.template_slurm_config = "#SBATCH --{command_name}={command_value}\n"
         self.runscript_outdir = runscript_outdir
@@ -192,6 +196,7 @@ class SlurmBuilder(object):
 
     def write_spawnlist(self):
         content = ""
+        content += self.runcommands_file_precommand
         for shfilename in self.shfilenames:
             spawncommand = self.build_spawn_command(shfilename=shfilename, to_args=False)
             content = content + spawncommand + "\n"
