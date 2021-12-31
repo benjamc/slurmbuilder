@@ -187,7 +187,7 @@ class SlurmBuilder(object):
 
     def build_spawn_command(self, shfilename: str, to_args: bool = True):
         # shfilename = Path(os.getcwd()) / shfilename
-        spawncommand = f"sbatch '{shfilename}'"
+        spawncommand = f"sbatch {shfilename}"
         if to_args:
             cmd = spawncommand.split(" ")  # split at whitespaces to create args for subprocess.run
         else:
