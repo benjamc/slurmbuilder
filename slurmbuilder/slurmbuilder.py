@@ -285,6 +285,7 @@ class SlurmBuilder(object):
                     v = value
                 job_id += f"{arg_id}{v}_"
             job_id = job_id[:-1]  # remove last underscore
+            job_id = job_id.replace(" ", "__")
             kwargs = {arg_name: value for arg_name, value in zip(arg_names, combo)}
             fullcommand = self.build_shfile_body(job_name_identifier=job_id, **kwargs)
 
